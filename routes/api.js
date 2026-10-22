@@ -2,8 +2,9 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
+const supabase = require('../config/supabase');
 
-// Storage directory for incoming leads/quotes
+// Storage directory for local fallback storage
 const DATA_DIR = path.join(__dirname, '..', 'data');
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -12,8 +13,8 @@ if (!fs.existsSync(DATA_DIR)) {
 const QUOTES_FILE = path.join(DATA_DIR, 'quotes.json');
 const MESSAGES_FILE = path.join(DATA_DIR, 'messages.json');
 
-// Helper to safely append entries
-function appendRecord(filePath, record) {
+// Helper to safely append local records as backup
+function appendLocalRecord(filePath, record) {
   try {
     let list = [];
     if (fs.existsSync(filePath)) {
@@ -23,7 +24,7 @@ function appendRecord(filePath, record) {
     list.unshift(record);
     fs.writeFileSync(filePath, JSON.stringify(list, null, 2), 'utf8');
   } catch (err) {
-    console.error(`Error saving record to ${filePath}:`, err);
+    console.error(`Error saving local backup to ${filePath}:`, err);
   }
 }
 
@@ -46,9 +47,9 @@ const ADDON_RATES = {
 
 /**
  * POST /api/quote
- * Receives project requirements and computes an instant estimate
+ * Receives project requirements, computes estimate, and saves to Supabase + local backup
  */
-router.post('/quote', (req, res) => {
+router.post('/quote', async (req, res) => {
   try {
     const {
       name,
@@ -80,7 +81,7 @@ router.post('/quote', (req, res) => {
     });
 
     if (calculatedTotal === 0) {
-      calculatedTotal = 950; // Minimum project starter
+      calculatedTotal = 950; // Starter project
     }
 
     addons.forEach(addonKey => {
@@ -95,9 +96,11 @@ router.post('/quote', (req, res) => {
       calculatedTotal = Math.round(calculatedTotal * 0.9);
     }
 
+    const quoteId = 'Q-' + Date.now().toString(36).toUpperCase();
+    const turnaround = timeline === 'express' ? '3-7 Business Days' : '10-20 Business Days';
+
     const quoteRecord = {
-      id: 'Q-' + Date.now().toString(36).toUpperCase(),
-      createdAt: new Date().toISOString(),
+      id: quoteId,
       name,
       email,
       phone: phone || 'Not provided',
@@ -107,19 +110,52 @@ router.post('/quote', (req, res) => {
       addons,
       projectDetails,
       estimatedPriceCAD: calculatedTotal,
-      estimatedTurnaround: timeline === 'express' ? '3-7 Business Days' : '10-20 Business Days',
-      status: 'new'
+      estimatedTurnaround: turnaround,
+      status: 'new',
+      createdAt: new Date().toISOString()
     };
 
-    appendRecord(QUOTES_FILE, quoteRecord);
+    // 1. Always save to local backup
+    appendLocalRecord(QUOTES_FILE, quoteRecord);
 
-    console.log(`[Quote Received] ${quoteRecord.id} from ${name} (${email}) - Est: $${calculatedTotal} CAD`);
+    // 2. Insert into Supabase Postgres database
+    let savedToSupabase = false;
+    if (supabase) {
+      try {
+        const { error: dbError } = await supabase.from('quotes').insert([{
+          id: quoteId,
+          name,
+          email,
+          phone: phone || null,
+          services: selectedServiceDetails,
+          timeline,
+          budget_range: budgetRange,
+          addons,
+          project_details: projectDetails,
+          estimated_price_cad: calculatedTotal,
+          estimated_turnaround: turnaround,
+          status: 'new'
+        }]);
+
+        if (dbError) {
+          console.warn('[Supabase Quotes Warning]:', dbError.message);
+        } else {
+          savedToSupabase = true;
+          console.log(`[Supabase] Quote ${quoteId} synchronized to database successfully!`);
+        }
+      } catch (dbErr) {
+        console.error('[Supabase Quotes Error]:', dbErr.message);
+      }
+    }
+
+    console.log(`[Quote Received] ${quoteId} from ${name} (${email}) - Est: $${calculatedTotal} CAD (Supabase: ${savedToSupabase})`);
 
     return res.status(201).json({
       success: true,
       quoteId: quoteRecord.id,
       estimatedPriceCAD: calculatedTotal,
-      estimatedTurnaround: quoteRecord.estimatedTurnaround,
+      estimatedTurnaround: turnaround,
+      savedToSupabase,
       message: `Thank you ${name}! Your custom quote has been generated. Faraz Ahmed will reach out within 2-4 hours.`,
       quote: quoteRecord
     });
@@ -134,9 +170,9 @@ router.post('/quote', (req, res) => {
 
 /**
  * POST /api/contact
- * Direct contact form submission
+ * Direct contact form submission - saves to Supabase + local backup
  */
-router.post('/contact', (req, res) => {
+router.post('/contact', async (req, res) => {
   try {
     const { name, email, phone, subject, message, service } = req.body;
 
@@ -147,25 +183,55 @@ router.post('/contact', (req, res) => {
       });
     }
 
+    const messageId = 'MSG-' + Date.now().toString(36).toUpperCase();
+
     const contactRecord = {
-      id: 'MSG-' + Date.now().toString(36).toUpperCase(),
-      createdAt: new Date().toISOString(),
+      id: messageId,
       name,
       email,
       phone: phone || 'N/A',
-      subject: subject || 'New Website Inquiry',
       service: service || 'General Consultation',
+      subject: subject || 'New Website Inquiry',
       message,
-      status: 'unread'
+      status: 'unread',
+      createdAt: new Date().toISOString()
     };
 
-    appendRecord(MESSAGES_FILE, contactRecord);
+    // 1. Always save to local backup
+    appendLocalRecord(MESSAGES_FILE, contactRecord);
 
-    console.log(`[Message Received] From ${name} <${email}> - Subject: ${subject}`);
+    // 2. Insert into Supabase database
+    let savedToSupabase = false;
+    if (supabase) {
+      try {
+        const { error: dbError } = await supabase.from('messages').insert([{
+          id: messageId,
+          name,
+          email,
+          phone: phone || null,
+          service: service || 'General Consultation',
+          subject: subject || 'New Website Inquiry',
+          message,
+          status: 'unread'
+        }]);
+
+        if (dbError) {
+          console.warn('[Supabase Messages Warning]:', dbError.message);
+        } else {
+          savedToSupabase = true;
+          console.log(`[Supabase] Message ${messageId} synchronized to database successfully!`);
+        }
+      } catch (dbErr) {
+        console.error('[Supabase Messages Error]:', dbErr.message);
+      }
+    }
+
+    console.log(`[Message Received] From ${name} <${email}> - Subject: ${subject} (Supabase: ${savedToSupabase})`);
 
     return res.status(201).json({
       success: true,
-      messageId: contactRecord.id,
+      messageId,
+      savedToSupabase,
       message: `Message sent successfully! Faraz Ahmed will reply to ${email} shortly.`
     });
   } catch (error) {
@@ -174,6 +240,44 @@ router.post('/contact', (req, res) => {
       success: false,
       message: 'Failed to send message. Please reach Faraz directly via WhatsApp or faraz.ahmed4723@gmail.com'
     });
+  }
+});
+
+/**
+ * GET /api/admin/leads
+ * Helper endpoint to retrieve recent quotes and messages from Supabase or local backup
+ */
+router.get('/admin/leads', async (req, res) => {
+  try {
+    let quotes = [];
+    let messages = [];
+
+    if (supabase) {
+      const { data: qData } = await supabase.from('quotes').select('*').order('created_at', { ascending: false }).limit(50);
+      if (qData) quotes = qData;
+
+      const { data: mData } = await supabase.from('messages').select('*').order('created_at', { ascending: false }).limit(50);
+      if (mData) messages = mData;
+    }
+
+    // Fallback to local files if Supabase is empty or tables not migrated yet
+    if (quotes.length === 0 && fs.existsSync(QUOTES_FILE)) {
+      quotes = JSON.parse(fs.readFileSync(QUOTES_FILE, 'utf8') || '[]');
+    }
+    if (messages.length === 0 && fs.existsSync(MESSAGES_FILE)) {
+      messages = JSON.parse(fs.readFileSync(MESSAGES_FILE, 'utf8') || '[]');
+    }
+
+    return res.json({
+      success: true,
+      supabaseConnected: !!supabase,
+      totalQuotes: quotes.length,
+      totalMessages: messages.length,
+      quotes,
+      messages
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
   }
 });
 
