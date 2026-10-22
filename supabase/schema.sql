@@ -1,8 +1,6 @@
 -- ==============================================================
 -- AI BY FARAZ — SUPABASE DATABASE SCHEMA
 -- Project Ref: mhcyholumqneneauotbe
--- Paste this script into your Supabase Dashboard:
--- https://supabase.com/dashboard/project/mhcyholumqneneauotbe/sql/new
 -- ==============================================================
 
 -- 1. Create Quotes Table
@@ -22,7 +20,6 @@ CREATE TABLE IF NOT EXISTS public.quotes (
     status TEXT DEFAULT 'new' CHECK (status IN ('new', 'contacted', 'in_progress', 'completed', 'archived'))
 );
 
--- Index for searching and filtering quotes
 CREATE INDEX IF NOT EXISTS idx_quotes_created_at ON public.quotes (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_quotes_email ON public.quotes (email);
 CREATE INDEX IF NOT EXISTS idx_quotes_status ON public.quotes (status);
@@ -40,34 +37,35 @@ CREATE TABLE IF NOT EXISTS public.messages (
     status TEXT DEFAULT 'unread' CHECK (status IN ('unread', 'read', 'replied', 'archived'))
 );
 
--- Index for messages
 CREATE INDEX IF NOT EXISTS idx_messages_created_at ON public.messages (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_messages_email ON public.messages (email);
 CREATE INDEX IF NOT EXISTS idx_messages_status ON public.messages (status);
 
--- ==============================================================
--- ROW LEVEL SECURITY (RLS) POLICIES
--- ==============================================================
+-- 3. Row Level Security
 ALTER TABLE public.quotes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 
--- Allow insert by anon/public and authenticated backend
+-- Idempotent Policies (Drops existing first to prevent 42710 errors)
+DROP POLICY IF EXISTS "Allow public insert to quotes" ON public.quotes;
 CREATE POLICY "Allow public insert to quotes" 
 ON public.quotes FOR INSERT 
 TO public 
 WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow service role full access to quotes" ON public.quotes;
 CREATE POLICY "Allow service role full access to quotes" 
 ON public.quotes FOR ALL 
 TO service_role 
 USING (true) 
 WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow public insert to messages" ON public.messages;
 CREATE POLICY "Allow public insert to messages" 
 ON public.messages FOR INSERT 
 TO public 
 WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow service role full access to messages" ON public.messages;
 CREATE POLICY "Allow service role full access to messages" 
 ON public.messages FOR ALL 
 TO service_role 
