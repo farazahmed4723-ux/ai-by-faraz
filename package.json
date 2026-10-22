@@ -1,0 +1,28 @@
+{
+  "name": "ai-by-faraz",
+  "version": "1.0.0",
+  "description": "Official Agency & Portfolio Platform for AI by Faraz - Next-Gen Web Development, Autonomous AI Agents, Luxury Graphic Design & Cinematic Video Editing | Toronto, Canada",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "ai-by-faraz",
+    "faraz-ahmed",
+    "web-development",
+    "ai-agents",
+    "graphic-design",
+    "video-editing",
+    "toronto",
+    "software-engineer",
+    "node-js",
+    "portfolio"
+  ],
+  "author": "Faraz Ahmed <faraz.ahmed4723@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  }
+}

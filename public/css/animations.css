@@ -1,0 +1,95 @@
+/* ============================================================== */
+/* AI BY FARAZ - MOTION & KEYFRAME ANIMATIONS                     */
+/* ============================================================== */
+
+@keyframes pulseBlob {
+  0% {
+    transform: scale(0.9) translate(0, 0);
+  }
+  50% {
+    transform: scale(1.15) translate(30px, -20px);
+  }
+  100% {
+    transform: scale(0.95) translate(-25px, 25px);
+  }
+}
+
+@keyframes pulseEmerald {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+@keyframes pulsePurple {
+  0% {
+    box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(168, 85, 247, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(168, 85, 247, 0);
+  }
+}
+
+@keyframes shineLoop {
+  0% {
+    left: -100%;
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.7;
+  }
+  40% {
+    left: 150%;
+    opacity: 0;
+  }
+  100% {
+    left: 150%;
+    opacity: 0;
+  }
+}
+
+@keyframes marqueeLoop {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes floatLevitate {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.badge-top-left {
+  animation: floatLevitate 5s ease-in-out infinite;
+}
+
+.badge-bottom-right {
+  animation: floatLevitate 6s ease-in-out infinite 1s;
+}
+
+/* Scroll reveal helper classes */
+.fade-in-up {
+  opacity: 0;
+  transform: translateY(25px);
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fade-in-up.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}

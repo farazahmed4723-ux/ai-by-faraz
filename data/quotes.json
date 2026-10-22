@@ -1,0 +1,22 @@
+[
+  {
+    "id": "Q-MVIZ15YV",
+    "createdAt": "2026-10-22T03:18:14.647Z",
+    "name": "Faraz Client",
+    "email": "client@toronto.ca",
+    "phone": "Not provided",
+    "services": [
+      "Full-Stack Web Development",
+      "Autonomous AI Agents & Automation"
+    ],
+    "timeline": "standard",
+    "budgetRange": "medium",
+    "addons": [
+      "seo"
+    ],
+    "projectDetails": "",
+    "estimatedPriceCAD": 3050,
+    "estimatedTurnaround": "10-20 Business Days",
+    "status": "new"
+  }
+]

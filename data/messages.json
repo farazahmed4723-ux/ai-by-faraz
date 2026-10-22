@@ -1,0 +1,13 @@
+[
+  {
+    "id": "MSG-MVIZ1BRD",
+    "createdAt": "2026-10-22T03:18:22.153Z",
+    "name": "Alex Henderson",
+    "email": "alex@example.com",
+    "phone": "+14371112233",
+    "subject": "AI Automation for Real Estate",
+    "service": "General Consultation",
+    "message": "Hi Faraz, we want to integrate an autonomous customer care AI agent for our property management firm.",
+    "status": "unread"
+  }
+]
